@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature Verification</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Signature Verification</h1>
+        
+        <!-- Form for uploading name and signature -->
+        <form id="verificationForm" enctype="multipart/form-data">
+            <label for="name">Enter Name:</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="signature">Upload Signature:</label>
+            <input type="file" id="signature" name="signature" accept="image/*" required>
+            
+            <button type="button" onclick="verifySignature()">Verify</button>
+        </form>
+
+        <!-- Verification Results Table -->
+        <h2>Verification Results:</h2>
+        <table id="resultsTable" border="1">
+            <tr>
+                <th>S.No</th>
+                <th>Uploaded Signature</th>
+                <th>Signature in Excel</th>
+                <th>Authentication</th>
+            </tr>
+            <!-- Rows will be dynamically added here by JavaScript -->
+        </table>
+    </div>
+
+    <script>
+        // Array to store verification results
+        let results = [];
+
+        // Function to verify signature via AJAX
+        function verifySignature() {
+            const name = document.getElementById('name').value;
+            const fileInput = document.getElementById('signature');
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            
+            formData.append('name', name);
+            formData.append('signature', file);
+
+            // AJAX request to server for verification
+            fetch('/verify', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Add result to array and update table
+                results.push(data);
+                updateResultsTable();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Function to update the results table with current entries in `results`
+        function updateResultsTable() {
+            const table = document.getElementById('resultsTable');
+            
+            // Clear existing rows, except the header
+            table.innerHTML = `
+                <tr>
+                    <th>S.No</th>
+                    <th>Uploaded Signature</th>
+                    <th>Signature in Excel</th>
+                    <th>Authentication</th>
+                </tr>
+            `;
+
+            // Add each result as a new row
+            results.forEach((result, index) => {
+                const row = table.insertRow();
+                
+                // Serial number
+                row.insertCell(0).textContent = index + 1;
+                
+                // Uploaded signature
+                const uploadedCell = row.insertCell(1);
+                const uploadedImg = document.createElement('img');
+                uploadedImg.src = result.uploaded_signature_url;
+                uploadedImg.alt = "Uploaded Signature";
+                uploadedImg.width = 100;
+                uploadedCell.appendChild(uploadedImg);
+                
+                // Matched signature or "No Match"
+                const matchedCell = row.insertCell(2);
+                if (result.matched_signature_url) {
+                    const matchedImg = document.createElement('img');
+                    matchedImg.src = result.matched_signature_url;
+                    matchedImg.alt = "Matched Signature";
+                    matchedImg.width = 100;
+                    matchedCell.appendChild(matchedImg);
+                } else {
+                    matchedCell.textContent = "No Match";
+                }
+                
+                // Authentication status
+                row.insertCell(3).textContent = result.auth_status;
+            });
+        }
+    </script>
+</body>
+</html>
